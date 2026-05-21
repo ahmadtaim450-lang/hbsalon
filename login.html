@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - HB Beauty Salon Admin</title>
+<meta name="theme-color" content="#F4A896">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HB Beauty">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+  :root {
+    --peach: #F4A896;
+    --coral: #F7C8B8;
+    --cream: #F5F1EC;
+    --green: #A8C3A0;
+    --dark: #2E3A2C;
+    --muted: #8B9A7A;
+    --white: #FFFFFF;
+    --shadow: 0 10px 30px rgba(0,0,0,0.05);
+  }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, var(--cream) 0%, var(--coral) 100%);
+    color: var(--dark);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  h1, h2, h3 { font-family: 'Playfair Display', serif; }
+
+  .login-container {
+    background: var(--white);
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    width: 100%;
+    max-width: 380px;
+    padding: 2.5rem 1.75rem;
+    animation: slideUp 0.5s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .login-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    line-height: 1;
+  }
+
+  .login-logo span { color: var(--peach); }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1.5px solid rgba(46, 58, 44, 0.15);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: var(--cream);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--peach);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(244, 168, 150, 0.1);
+  }
+
+  .form-input::placeholder {
+    color: var(--muted);
+  }
+
+  .btn-login {
+    width: 100%;
+    padding: 0.95rem;
+    background: var(--peach);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-login:hover {
+    background: #E89780;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(244, 168, 150, 0.3);
+  }
+
+  .btn-login:active {
+    transform: translateY(0);
+  }
+
+  .btn-login.loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-message {
+    background: rgba(220, 53, 69, 0.1);
+    color: #a02030;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    display: none;
+    border-left: 3px solid #dc3545;
+  }
+
+  .error-message.show {
+    display: block;
+    animation: shake 0.5s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  @media (max-width: 480px) {
+    .login-container {
+      padding: 2rem 1.25rem;
+    }
+    .login-logo {
+      font-size: 2rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-header">
+    <div class="login-logo">HB <span>Beauty</span></div>
+  </div>
+
+  <div class="error-message" id="errorMessage"></div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label class="form-label" for="email">E-Mail</label>
+      <input 
+        type="email" 
+        id="email" 
+        class="form-input" 
+        placeholder="admin@example.com" 
+        required
+      >
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password">Passwort</label>
+      <input 
+        type="password" 
+        id="password" 
+        class="form-input" 
+        placeholder="••••••••" 
+        required
+      >
+    </div>
+
+    <button type="submit" class="btn-login" id="loginBtn">
+      <span id="btnText">Anmelden</span>
+    </button>
+  </form>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBaZJv3TGpPm-b26-4pRpu0iVFtgWrKzrU",
+    authDomain: "hayasalon-f2cd1.firebaseapp.com",
+    projectId: "hayasalon-f2cd1",
+    storageBucket: "hayasalon-f2cd1.firebasestorage.app",
+    messagingSenderId: "859493179843",
+    appId: "1:859493179843:web:76e8a8a2ebec7ed4741d76"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const form = document.getElementById('loginForm');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const btnText = document.getElementById('btnText');
+  const errorMessage = document.getElementById('errorMessage');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      showError('Bitte füllen Sie alle Felder aus');
+      return;
+    }
+
+    loginBtn.classList.add('loading');
+    btnText.innerHTML = '<div class="spinner-small"></div>';
+
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      if (result.user) {
+        window.location.href = './';
+      }
+    } catch (error) {
+      let errorText = 'Anmeldefehler';
+      if (error.code === 'auth/user-not-found') {
+        errorText = 'Benutzer nicht gefunden';
+      } else if (error.code === 'auth/wrong-password') {
+        errorText = 'Falsches Passwort';
+      } else if (error.code === 'auth/invalid-email') {
+        errorText = 'Ungültige E-Mail-Adresse';
+      } else if (error.code === 'auth/user-disabled') {
+        errorText = 'Benutzerkonto deaktiviert';
+      }
+      showError(errorText);
+      loginBtn.classList.remove('loading');
+      btnText.textContent = 'Anmelden';
+    }
+  });
+
+  function showError(msg) {
+    errorMessage.textContent = msg;
+    errorMessage.classList.add('show');
+    setTimeout(() => {
+      errorMessage.classList.remove('show');
+    }, 4000);
+  }
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

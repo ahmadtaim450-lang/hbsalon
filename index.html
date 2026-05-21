@@ -21,7 +21,53 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <style>
-  /* ===== STATISTIK TAB ===== */
+  /* KPI INFO POPUP */
+  .kpi-popup-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 300;
+    align-items: center; justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: fadeInOverlay 0.2s ease;
+  }
+  .kpi-popup-overlay.active { display: flex; }
+  .kpi-popup {
+    background: var(--white); border-radius: 20px;
+    padding: 1.5rem; max-width: 320px; width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    animation: scaleIn 0.22s ease;
+    text-align: center;
+  }
+  .kpi-popup-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin: 0 auto 1rem;
+  }
+  .kpi-popup h4 {
+    font-size: 1.1rem; font-weight: 700;
+    color: var(--dark); margin-bottom: 0.5rem;
+  }
+  .kpi-popup p {
+    font-size: 0.88rem; color: var(--muted);
+    line-height: 1.6; margin-bottom: 1.25rem;
+  }
+  .kpi-popup-value {
+    font-size: 1.8rem; font-weight: 800;
+    color: var(--peach); margin-bottom: 1.25rem;
+    display: block;
+  }
+  .kpi-popup-ok {
+    background: var(--peach); color: var(--white);
+    border: none; border-radius: 50px;
+    padding: 0.7rem 2.5rem;
+    font-family: inherit; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease;
+    box-shadow: 0 6px 16px rgba(244,168,150,0.35);
+  }
+  .kpi-popup-ok:hover { background: #E09080; }
+  .fin-kpi-card { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .fin-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); } */
   .stats-period-bar {
     display: flex; gap: 0.5rem;
     margin-bottom: 1.25rem;
@@ -301,9 +347,13 @@
     display: flex; gap: 0.5rem; margin-bottom: 1.25rem;
     background: var(--white); padding: 0.4rem;
     border-radius: 14px; box-shadow: var(--shadow);
+    overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
   }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    flex: 1; padding: 0.65rem 0.85rem;
+    flex-shrink: 0;
+    padding: 0.65rem 0.85rem;
     border-radius: 10px; font-size: 0.82rem;
     font-weight: 600; color: var(--muted);
     transition: all 0.2s ease;
@@ -1238,28 +1288,28 @@
 
     <!-- KPI Cards -->
     <div class="fin-kpis" id="finKpis">
-      <div class="fin-kpi-card revenue">
+      <div class="fin-kpi-card revenue" data-kpi="revenue">
         <div class="fin-kpi-icon"><i class="fa-solid fa-euro-sign"></i></div>
         <div class="fin-kpi-body">
           <span class="fin-kpi-label">Umsatz</span>
           <strong class="fin-kpi-value" id="kpiRevenue">—</strong>
         </div>
       </div>
-      <div class="fin-kpi-card bookings">
+      <div class="fin-kpi-card bookings" data-kpi="bookings">
         <div class="fin-kpi-icon"><i class="fa-solid fa-calendar-check"></i></div>
         <div class="fin-kpi-body">
           <span class="fin-kpi-label">Termine</span>
           <strong class="fin-kpi-value" id="kpiBookings">—</strong>
         </div>
       </div>
-      <div class="fin-kpi-card avg">
+      <div class="fin-kpi-card avg" data-kpi="avg">
         <div class="fin-kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
         <div class="fin-kpi-body">
           <span class="fin-kpi-label">Ø Preis</span>
           <strong class="fin-kpi-value" id="kpiAvg">—</strong>
         </div>
       </div>
-      <div class="fin-kpi-card best">
+      <div class="fin-kpi-card best" data-kpi="best">
         <div class="fin-kpi-icon"><i class="fa-solid fa-star"></i></div>
         <div class="fin-kpi-body">
           <span class="fin-kpi-label">Top Behandlung</span>
@@ -1293,6 +1343,17 @@
     </div>
   </div>
 </main>
+
+<!-- ============ KPI INFO POPUP ============ -->
+<div class="kpi-popup-overlay" id="kpiPopupOverlay">
+  <div class="kpi-popup">
+    <div class="kpi-popup-icon" id="kpiPopupIcon"></div>
+    <h4 id="kpiPopupTitle"></h4>
+    <span class="kpi-popup-value" id="kpiPopupValue"></span>
+    <p id="kpiPopupDesc"></p>
+    <button class="kpi-popup-ok" id="kpiPopupOk">OK</button>
+  </div>
+</div>
 
 <!-- ============ NEU MODAL (desktop/tablet) ============ -->
 <div class="neu-modal-overlay" id="neuModalOverlay">
@@ -2278,6 +2339,8 @@
   // ============ ESC KEY ============
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (document.getElementById('kpiPopupOverlay').classList.contains('active'))
+        document.getElementById('kpiPopupOverlay').classList.remove('active');
       if (neuOverlay.classList.contains('active')) closeNeuModal();
       if (spOverlay.classList.contains('active')) closeServicePicker();
       if (tpOverlay.classList.contains('active')) closeTimePicker();
@@ -2492,6 +2555,91 @@
         btn.classList.add('active');
         currentPeriod = btn.dataset.period;
         updateStats(currentPeriod);
+      });
+    });
+
+    // KPI Popup
+    const overlay = document.getElementById('kpiPopupOverlay');
+    const okBtn = document.getElementById('kpiPopupOk');
+    okBtn.addEventListener('click', () => overlay.classList.remove('active'));
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('active'); });
+
+    const periodLabel = { week: 'dieser Woche', month: 'diesen Monat', year: 'dieses Jahr' };
+
+    const kpiInfoMap = {
+      revenue: {
+        icon: '<i class="fa-solid fa-euro-sign"></i>',
+        iconBg: 'rgba(244,168,150,0.15)', iconColor: '#E07A65',
+        title: 'Gesamtumsatz',
+        desc: () => {
+          const appts = getPeriodAppts(currentPeriod);
+          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
+          const pl = periodLabel[currentPeriod];
+          return `Summe aller Einnahmen aus Behandlungen ${pl}. Basierend auf ${appts.length} Termin(en).`;
+        },
+        value: () => {
+          const appts = getPeriodAppts(currentPeriod);
+          return appts.reduce((s,a) => s + extractPrice(a), 0) + '€';
+        }
+      },
+      bookings: {
+        icon: '<i class="fa-solid fa-calendar-check"></i>',
+        iconBg: 'rgba(168,195,160,0.15)', iconColor: '#5A8A50',
+        title: 'Anzahl Termine',
+        desc: () => {
+          const appts = getPeriodAppts(currentPeriod);
+          const pl = periodLabel[currentPeriod];
+          const cancelled = appts.filter(a => a.status === 'cancelled').length;
+          return `Gesamtzahl der Termine ${pl}. Davon ${cancelled} storniert.`;
+        },
+        value: () => getPeriodAppts(currentPeriod).length + ' Termine'
+      },
+      avg: {
+        icon: '<i class="fa-solid fa-arrow-trend-up"></i>',
+        iconBg: 'rgba(123,175,212,0.15)', iconColor: '#3B82C4',
+        title: 'Durchschnittspreis',
+        desc: () => {
+          const appts = getPeriodAppts(currentPeriod);
+          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
+          const avg = appts.length ? Math.round(total / appts.length) : 0;
+          return `Durchschnittlicher Umsatz pro Termin. Berechnet aus ${appts.length} Termin(en) mit einem Gesamtumsatz von ${total}€.`;
+        },
+        value: () => {
+          const appts = getPeriodAppts(currentPeriod);
+          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
+          return appts.length ? Math.round(total / appts.length) + '€' : '—';
+        }
+      },
+      best: {
+        icon: '<i class="fa-solid fa-star"></i>',
+        iconBg: 'rgba(196,167,212,0.15)', iconColor: '#9C5DC4',
+        title: 'Top Behandlung',
+        desc: () => {
+          const top = getTopServices(getPeriodAppts(currentPeriod));
+          if (!top.length) return 'Noch keine Daten vorhanden.';
+          const t = top[0];
+          return `Die umsatzstärkste Behandlung ist "${t.name}" mit ${t.count}× gebucht und ${t.revenue}€ Gesamtumsatz.`;
+        },
+        value: () => {
+          const top = getTopServices(getPeriodAppts(currentPeriod));
+          return top.length ? top[0].revenue + '€' : '—';
+        }
+      }
+    };
+
+    document.querySelectorAll('.fin-kpi-card').forEach(card => {
+      const key = card.dataset.kpi;
+      if (!key || !kpiInfoMap[key]) return;
+      card.addEventListener('click', () => {
+        const info = kpiInfoMap[key];
+        const iconEl = document.getElementById('kpiPopupIcon');
+        iconEl.innerHTML = info.icon;
+        iconEl.style.background = info.iconBg;
+        iconEl.style.color = info.iconColor;
+        document.getElementById('kpiPopupTitle').textContent = info.title;
+        document.getElementById('kpiPopupValue').textContent = info.value();
+        document.getElementById('kpiPopupDesc').textContent = info.desc();
+        overlay.classList.add('active');
       });
     });
   }

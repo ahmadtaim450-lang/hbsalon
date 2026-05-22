@@ -70,7 +70,7 @@
   .fin-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); } */
   .stats-period-bar {
     display: flex; gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     background: var(--white);
     border-radius: 50px;
     padding: 0.3rem;
@@ -94,10 +94,33 @@
     color: var(--white);
     box-shadow: 0 4px 12px rgba(244,168,150,0.35);
   }
+  /* Date Navigator */
+  .stats-nav {
+    display: flex; align-items: center; gap: 0.75rem;
+    background: var(--white); border-radius: 14px;
+    padding: 0.6rem 0.85rem; box-shadow: var(--shadow);
+    margin-bottom: 1.25rem;
+    width: fit-content; min-width: 230px;
+  }
+  .stats-nav-btn {
+    width: 32px; height: 32px; border-radius: 10px;
+    border: none; background: var(--cream); color: var(--dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; cursor: pointer; flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .stats-nav-btn:hover { background: var(--peach); color: var(--white); }
+  .stats-nav-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+  .stats-nav-label {
+    flex: 1; text-align: center;
+    font-size: 0.92rem; font-weight: 700; color: var(--dark);
+    white-space: nowrap;
+  }
   .fin-kpis {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
+    margin-top: 0.5rem;
     margin-bottom: 1rem;
   }
   .fin-kpi-card {
@@ -1286,6 +1309,13 @@
       <button class="period-btn" data-period="year">Jahr</button>
     </div>
 
+    <!-- Date Navigator (changes based on period) -->
+    <div class="stats-nav" id="statsNav">
+      <button class="stats-nav-btn" id="statsNavPrev"><i class="fa-solid fa-chevron-left"></i></button>
+      <span class="stats-nav-label" id="statsNavLabel">Diese Woche</span>
+      <button class="stats-nav-btn" id="statsNavNext"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+
     <!-- KPI Cards -->
     <div class="fin-kpis" id="finKpis">
       <div class="fin-kpi-card revenue" data-kpi="revenue">
@@ -1496,7 +1526,7 @@
       // Refresh stats if stats tab is active
       const statsContent = document.querySelector('.tab-content[data-tab-content="stats"]');
       if (statsContent && statsContent.classList.contains('active')) {
-        setTimeout(() => updateStats(currentPeriod), 50);
+        setTimeout(() => updateStats(), 50);
       }
     });
 
@@ -2364,154 +2394,190 @@
   let revenueChartInst = null;
   let categoryChartInst = null;
 
+  // State: which week/month/year is currently selected
+  const now = new Date();
+  let statsState = {
+    week: { ref: new Date(now) },           // reference date within chosen week
+    month: { year: now.getFullYear(), month: now.getMonth() },
+    year:  { year: now.getFullYear() }
+  };
+
   function extractPrice(appt) {
     if (appt.price && appt.price > 0) return appt.price;
     const m = (appt.service || '').match(/\((\d+)€\)/);
     return m ? parseInt(m[1], 10) : 0;
   }
 
-  function getPeriodAppts(period) {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Returns start and end Date for the currently selected period
+  function getPeriodRange(period) {
+    const s = statsState[period];
+    if (period === 'week') {
+      const ref = s.ref;
+      const dow = ref.getDay() === 0 ? 6 : ref.getDay() - 1;
+      const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - dow);
+      const end   = new Date(start); end.setDate(start.getDate() + 6);
+      return { start, end };
+    }
+    if (period === 'month') {
+      const start = new Date(s.year, s.month, 1);
+      const end   = new Date(s.year, s.month + 1, 0);
+      return { start, end };
+    }
+    if (period === 'year') {
+      const start = new Date(s.year, 0, 1);
+      const end   = new Date(s.year, 11, 31);
+      return { start, end };
+    }
+  }
 
+  function getPeriodAppts(period) {
+    const { start, end } = getPeriodRange(period);
     return allAppointments.filter(a => {
       if (!a.dateISO) return false;
       const d = new Date(a.dateISO);
-      if (period === 'week') {
-        const dow = today.getDay() === 0 ? 6 : today.getDay() - 1; // Mon=0
-        const weekStart = new Date(today); weekStart.setDate(today.getDate() - dow);
-        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
-        return d >= weekStart && d <= weekEnd;
-      }
-      if (period === 'month') {
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      }
-      if (period === 'year') {
-        return d.getFullYear() === now.getFullYear();
-      }
-      return false;
+      return d >= start && d <= end;
     });
   }
 
-  function getRevenueChartData(period, appts) {
-    const now = new Date();
+  const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+  function getNavLabel(period) {
+    const s = statsState[period];
     if (period === 'week') {
+      const { start, end } = getPeriodRange('week');
+      const fmt = d => `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}`;
+      const isCurrentWeek = (() => {
+        const today = new Date();
+        const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+        const cs = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow);
+        return start.toDateString() === cs.toDateString();
+      })();
+      return isCurrentWeek ? `Diese Woche` : `${fmt(start)} – ${fmt(end)}`;
+    }
+    if (period === 'month') {
+      const isCurrentMonth = s.year === now.getFullYear() && s.month === now.getMonth();
+      return isCurrentMonth ? `Dieser Monat` : `${MONTH_NAMES[s.month]} ${s.year}`;
+    }
+    if (period === 'year') {
+      return s.year === now.getFullYear() ? `Dieses Jahr` : `${s.year}`;
+    }
+  }
+
+  function isNavAtPresent(period) {
+    const s = statsState[period];
+    if (period === 'week') {
+      const { start } = getPeriodRange('week');
+      const today = new Date();
+      const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+      const cs = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow);
+      return start >= cs;
+    }
+    if (period === 'month') return s.year > now.getFullYear() || (s.year === now.getFullYear() && s.month >= now.getMonth());
+    if (period === 'year')  return s.year >= now.getFullYear();
+  }
+
+  function stepNav(period, dir) {
+    const s = statsState[period];
+    if (period === 'week') {
+      s.ref = new Date(s.ref); s.ref.setDate(s.ref.getDate() + dir * 7);
+    } else if (period === 'month') {
+      s.month += dir;
+      if (s.month > 11) { s.month = 0;  s.year++; }
+      if (s.month < 0)  { s.month = 11; s.year--; }
+    } else if (period === 'year') {
+      s.year += dir;
+    }
+  }
+
+  function updateNavUI() {
+    document.getElementById('statsNavLabel').textContent = getNavLabel(currentPeriod);
+    document.getElementById('statsNavNext').disabled = isNavAtPresent(currentPeriod);
+    // Only hide week's prev if you want (no restriction — allow going back freely)
+    document.getElementById('statsNavPrev').disabled = false;
+  }
+
+  function getRevenueChartData(period) {
+    const appts = getPeriodAppts(period);
+    const s = statsState[period];
+    if (period === 'week') {
+      const { start } = getPeriodRange('week');
       const days = ['Mo','Di','Mi','Do','Fr','Sa','So'];
       const vals = new Array(7).fill(0);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
-      const weekStart = new Date(today); weekStart.setDate(today.getDate() - dow);
       appts.forEach(a => {
         const d = new Date(a.dateISO);
-        const idx = Math.floor((d - weekStart) / 86400000);
+        const idx = Math.floor((d - start) / 86400000);
         if (idx >= 0 && idx < 7) vals[idx] += extractPrice(a);
       });
       return { labels: days, data: vals };
     }
     if (period === 'month') {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const daysInMonth = new Date(s.year, s.month + 1, 0).getDate();
       const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
       const vals = new Array(daysInMonth).fill(0);
-      appts.forEach(a => {
-        const d = new Date(a.dateISO);
-        vals[d.getDate() - 1] += extractPrice(a);
-      });
+      appts.forEach(a => { const d = new Date(a.dateISO); vals[d.getDate()-1] += extractPrice(a); });
       return { labels, data: vals };
     }
     if (period === 'year') {
-      const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
       const vals = new Array(12).fill(0);
-      appts.forEach(a => {
-        const d = new Date(a.dateISO);
-        vals[d.getMonth()] += extractPrice(a);
-      });
-      return { labels: months, data: vals };
+      appts.forEach(a => { const d = new Date(a.dateISO); vals[d.getMonth()] += extractPrice(a); });
+      return { labels: ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'], data: vals };
     }
     return { labels: [], data: [] };
   }
 
   function getCategoryData(appts) {
+    const catColors = { laser:'#F4A896', pmu:'#C4A7D4', wimpern:'#7BAFD4', lifting:'#A8C3A0', gesicht:'#FFD580', microneedling:'#F4C6A0', beratung:'#B0C4DE', other:'#E8D5B0' };
+    const catLabels = { laser:'Laser', pmu:'PMU', wimpern:'Wimpern', lifting:'Lifting', gesicht:'Gesicht', microneedling:'Microneedling', beratung:'Beratung', other:'Sonstige' };
     const catMap = {};
-    const catColors = {
-      laser: '#F4A896', pmu: '#C4A7D4', wimpern: '#7BAFD4',
-      lifting: '#A8C3A0', other: '#E8D5B0'
-    };
-    const catLabels = {
-      laser: 'Laser', pmu: 'PMU', wimpern: 'Wimpern',
-      lifting: 'Lifting', other: 'Sonstige'
-    };
-    appts.forEach(a => {
-      const cat = a.category || 'other';
-      catMap[cat] = (catMap[cat] || 0) + extractPrice(a);
-    });
-    const entries = Object.entries(catMap).filter(([,v]) => v > 0);
-    return {
-      labels: entries.map(([k]) => catLabels[k] || k),
-      data: entries.map(([,v]) => v),
-      colors: entries.map(([k]) => catColors[k] || '#ccc')
-    };
+    appts.forEach(a => { const c = a.category||'other'; catMap[c]=(catMap[c]||0)+extractPrice(a); });
+    const entries = Object.entries(catMap).filter(([,v])=>v>0);
+    return { labels: entries.map(([k])=>catLabels[k]||k), data: entries.map(([,v])=>v), colors: entries.map(([k])=>catColors[k]||'#ccc') };
   }
 
   function getTopServices(appts) {
     const map = {};
     appts.forEach(a => {
-      const s = (a.service || '').replace(/\s*\(\d+€\)/, '').trim();
-      if (!map[s]) map[s] = { revenue: 0, count: 0 };
-      map[s].revenue += extractPrice(a);
-      map[s].count++;
+      const s = (a.service||'').replace(/\s*\(\d+€\)/,'').trim();
+      if (!map[s]) map[s]={revenue:0,count:0};
+      map[s].revenue += extractPrice(a); map[s].count++;
     });
-    return Object.entries(map)
-      .map(([name, v]) => ({ name, ...v }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 6);
+    return Object.entries(map).map(([name,v])=>({name,...v})).sort((a,b)=>b.revenue-a.revenue).slice(0,6);
   }
 
-  function updateStats(period) {
+  function getChartTitle(period) {
+    const s = statsState[period];
+    if (period === 'week') { const { start, end } = getPeriodRange('week'); const fmt = d=>`${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}`; return `Umsatz ${fmt(start)}–${fmt(end)}`; }
+    if (period === 'month') return `Umsatz ${MONTH_NAMES[s.month]} ${s.year}`;
+    if (period === 'year')  return `Umsatz ${s.year}`;
+  }
+
+  function updateStats() {
+    const period = currentPeriod;
     const appts = getPeriodAppts(period);
-    const totalRev = appts.reduce((s, a) => s + extractPrice(a), 0);
-    const avgPrice = appts.length ? Math.round(totalRev / appts.length) : 0;
+    const totalRev = appts.reduce((s,a)=>s+extractPrice(a),0);
+    const avgPrice = appts.length ? Math.round(totalRev/appts.length) : 0;
     const topSvc = getTopServices(appts)[0];
 
-    document.getElementById('kpiRevenue').textContent = totalRev > 0 ? `${totalRev}€` : '0€';
+    document.getElementById('kpiRevenue').textContent = totalRev+'€';
     document.getElementById('kpiBookings').textContent = appts.length;
-    document.getElementById('kpiAvg').textContent = avgPrice > 0 ? `${avgPrice}€` : '—';
+    document.getElementById('kpiAvg').textContent = avgPrice>0 ? avgPrice+'€' : '—';
     document.getElementById('kpiBest').textContent = topSvc ? topSvc.name : '—';
-
-    const titles = { week: 'Umsatz diese Woche', month: 'Umsatz diesen Monat', year: 'Umsatz dieses Jahr' };
-    document.getElementById('chartTitle').textContent = titles[period];
+    document.getElementById('chartTitle').textContent = getChartTitle(period);
+    updateNavUI();
 
     // Revenue Chart
-    const { labels, data } = getRevenueChartData(period, appts);
+    const { labels, data } = getRevenueChartData(period);
     const rCtx = document.getElementById('revenueChart').getContext('2d');
     if (revenueChartInst) revenueChartInst.destroy();
-    const gradient = rCtx.createLinearGradient(0, 0, 0, 260);
-    gradient.addColorStop(0, 'rgba(244,168,150,0.35)');
-    gradient.addColorStop(1, 'rgba(244,168,150,0)');
     revenueChartInst = new Chart(rCtx, {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Umsatz (€)',
-          data,
-          backgroundColor: data.map(v => v > 0 ? 'rgba(244,168,150,0.85)' : 'rgba(244,168,150,0.15)'),
-          borderColor: 'rgba(244,168,150,1)',
-          borderWidth: 1.5,
-          borderRadius: 8,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: {
-          callbacks: { label: ctx => ` ${ctx.raw}€` }
-        }},
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#8B9A7A' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' },
-            ticks: { callback: v => v + '€', font: { size: 11 }, color: '#8B9A7A' } }
-        }
-      }
+      data: { labels, datasets: [{ label:'Umsatz (€)', data,
+        backgroundColor: data.map(v=>v>0?'rgba(244,168,150,0.85)':'rgba(244,168,150,0.15)'),
+        borderColor:'rgba(244,168,150,1)', borderWidth:1.5, borderRadius:8, borderSkipped:false }] },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{label:ctx=>` ${ctx.raw}€`} } },
+        scales:{ x:{grid:{display:false}, ticks:{font:{size:10},color:'#8B9A7A'}},
+          y:{beginAtZero:true, grid:{color:'rgba(0,0,0,0.05)'}, ticks:{callback:v=>v+'€',font:{size:10},color:'#8B9A7A'}} } }
     });
 
     // Category Donut
@@ -2520,110 +2586,70 @@
     if (categoryChartInst) categoryChartInst.destroy();
     if (catData.data.length) {
       categoryChartInst = new Chart(cCtx, {
-        type: 'doughnut',
-        data: { labels: catData.labels, datasets: [{ data: catData.data, backgroundColor: catData.colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          cutout: '65%',
-          plugins: {
-            legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: '#2E3A2C' } },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}€` } }
-          }
-        }
+        type:'doughnut',
+        data:{ labels:catData.labels, datasets:[{data:catData.data, backgroundColor:catData.colors, borderWidth:2, borderColor:'#fff', hoverOffset:6}] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
+          plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:10,color:'#2E3A2C'}},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw}€`}} } }
       });
-    } else {
-      cCtx.clearRect(0, 0, cCtx.canvas.width, cCtx.canvas.height);
-    }
+    } else { cCtx.clearRect(0,0,cCtx.canvas.width,cCtx.canvas.height); }
 
-    // Top Services List
+    // Top Services
     const top = getTopServices(appts);
-    const rankClass = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankCls = i=>i===0?'gold':i===1?'silver':i===2?'bronze':'';
     document.getElementById('topServicesList').innerHTML = top.length
-      ? top.map((s, i) => `
-          <div class="fin-top-item">
-            <div class="fin-top-rank ${rankClass(i)}">${i + 1}</div>
-            <div class="fin-top-name">${s.name} <small style="color:var(--muted)">(${s.count}×)</small></div>
-            <div class="fin-top-revenue">${s.revenue}€</div>
-          </div>`).join('')
+      ? top.map((s,i)=>`<div class="fin-top-item"><div class="fin-top-rank ${rankCls(i)}">${i+1}</div><div class="fin-top-name">${s.name} <small style="color:var(--muted)">(${s.count}×)</small></div><div class="fin-top-revenue">${s.revenue}€</div></div>`).join('')
       : '<div style="color:var(--muted);font-size:0.88rem;padding:1rem 0">Keine Daten vorhanden</div>';
   }
 
   function setupStats() {
+    // Period buttons
     document.querySelectorAll('.period-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         currentPeriod = btn.dataset.period;
-        updateStats(currentPeriod);
+        updateStats();
       });
+    });
+
+    // Nav arrows
+    document.getElementById('statsNavPrev').addEventListener('click', () => {
+      stepNav(currentPeriod, -1); updateStats();
+    });
+    document.getElementById('statsNavNext').addEventListener('click', () => {
+      if (!isNavAtPresent(currentPeriod)) { stepNav(currentPeriod, 1); updateStats(); }
     });
 
     // KPI Popup
     const overlay = document.getElementById('kpiPopupOverlay');
-    const okBtn = document.getElementById('kpiPopupOk');
-    okBtn.addEventListener('click', () => overlay.classList.remove('active'));
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('active'); });
-
-    const periodLabel = { week: 'dieser Woche', month: 'diesen Monat', year: 'dieses Jahr' };
+    document.getElementById('kpiPopupOk').addEventListener('click', ()=>overlay.classList.remove('active'));
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('active'); });
 
     const kpiInfoMap = {
       revenue: {
-        icon: '<i class="fa-solid fa-euro-sign"></i>',
-        iconBg: 'rgba(244,168,150,0.15)', iconColor: '#E07A65',
-        title: 'Gesamtumsatz',
-        desc: () => {
-          const appts = getPeriodAppts(currentPeriod);
-          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
-          const pl = periodLabel[currentPeriod];
-          return `Summe aller Einnahmen aus Behandlungen ${pl}. Basierend auf ${appts.length} Termin(en).`;
-        },
-        value: () => {
-          const appts = getPeriodAppts(currentPeriod);
-          return appts.reduce((s,a) => s + extractPrice(a), 0) + '€';
-        }
+        icon:'<i class="fa-solid fa-euro-sign"></i>', iconBg:'rgba(244,168,150,0.15)', iconColor:'#E07A65',
+        title:'Gesamtumsatz',
+        desc:()=>{ const a=getPeriodAppts(currentPeriod); return `Summe aller Einnahmen im gewählten Zeitraum. Basierend auf ${a.length} Termin(en).`; },
+        value:()=>getPeriodAppts(currentPeriod).reduce((s,a)=>s+extractPrice(a),0)+'€'
       },
       bookings: {
-        icon: '<i class="fa-solid fa-calendar-check"></i>',
-        iconBg: 'rgba(168,195,160,0.15)', iconColor: '#5A8A50',
-        title: 'Anzahl Termine',
-        desc: () => {
-          const appts = getPeriodAppts(currentPeriod);
-          const pl = periodLabel[currentPeriod];
-          const cancelled = appts.filter(a => a.status === 'cancelled').length;
-          return `Gesamtzahl der Termine ${pl}. Davon ${cancelled} storniert.`;
-        },
-        value: () => getPeriodAppts(currentPeriod).length + ' Termine'
+        icon:'<i class="fa-solid fa-calendar-check"></i>', iconBg:'rgba(168,195,160,0.15)', iconColor:'#5A8A50',
+        title:'Anzahl Termine',
+        desc:()=>{ const a=getPeriodAppts(currentPeriod); const c=a.filter(x=>x.status==='cancelled').length; return `Gesamtzahl der Termine im gewählten Zeitraum. Davon ${c} storniert.`; },
+        value:()=>getPeriodAppts(currentPeriod).length+' Termine'
       },
       avg: {
-        icon: '<i class="fa-solid fa-arrow-trend-up"></i>',
-        iconBg: 'rgba(123,175,212,0.15)', iconColor: '#3B82C4',
-        title: 'Durchschnittspreis',
-        desc: () => {
-          const appts = getPeriodAppts(currentPeriod);
-          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
-          const avg = appts.length ? Math.round(total / appts.length) : 0;
-          return `Durchschnittlicher Umsatz pro Termin. Berechnet aus ${appts.length} Termin(en) mit einem Gesamtumsatz von ${total}€.`;
-        },
-        value: () => {
-          const appts = getPeriodAppts(currentPeriod);
-          const total = appts.reduce((s,a) => s + extractPrice(a), 0);
-          return appts.length ? Math.round(total / appts.length) + '€' : '—';
-        }
+        icon:'<i class="fa-solid fa-arrow-trend-up"></i>', iconBg:'rgba(123,175,212,0.15)', iconColor:'#3B82C4',
+        title:'Durchschnittspreis',
+        desc:()=>{ const a=getPeriodAppts(currentPeriod); const t=a.reduce((s,x)=>s+extractPrice(x),0); return `Ø Umsatz pro Termin. Berechnet aus ${a.length} Termin(en) mit ${t}€ Gesamtumsatz.`; },
+        value:()=>{ const a=getPeriodAppts(currentPeriod); const t=a.reduce((s,x)=>s+extractPrice(x),0); return a.length?Math.round(t/a.length)+'€':'—'; }
       },
       best: {
-        icon: '<i class="fa-solid fa-star"></i>',
-        iconBg: 'rgba(196,167,212,0.15)', iconColor: '#9C5DC4',
-        title: 'Top Behandlung',
-        desc: () => {
-          const top = getTopServices(getPeriodAppts(currentPeriod));
-          if (!top.length) return 'Noch keine Daten vorhanden.';
-          const t = top[0];
-          return `Die umsatzstärkste Behandlung ist "${t.name}" mit ${t.count}× gebucht und ${t.revenue}€ Gesamtumsatz.`;
-        },
-        value: () => {
-          const top = getTopServices(getPeriodAppts(currentPeriod));
-          return top.length ? top[0].revenue + '€' : '—';
-        }
+        icon:'<i class="fa-solid fa-star"></i>', iconBg:'rgba(196,167,212,0.15)', iconColor:'#9C5DC4',
+        title:'Top Behandlung',
+        desc:()=>{ const t=getTopServices(getPeriodAppts(currentPeriod)); return t.length?`"${t[0].name}" – ${t[0].count}× gebucht, ${t[0].revenue}€ Umsatz.`:'Noch keine Daten.'; },
+        value:()=>{ const t=getTopServices(getPeriodAppts(currentPeriod)); return t.length?t[0].revenue+'€':'—'; }
       }
     };
 
@@ -2633,9 +2659,7 @@
       card.addEventListener('click', () => {
         const info = kpiInfoMap[key];
         const iconEl = document.getElementById('kpiPopupIcon');
-        iconEl.innerHTML = info.icon;
-        iconEl.style.background = info.iconBg;
-        iconEl.style.color = info.iconColor;
+        iconEl.innerHTML = info.icon; iconEl.style.background = info.iconBg; iconEl.style.color = info.iconColor;
         document.getElementById('kpiPopupTitle').textContent = info.title;
         document.getElementById('kpiPopupValue').textContent = info.value();
         document.getElementById('kpiPopupDesc').textContent = info.desc();
@@ -2647,9 +2671,7 @@
   // Run stats when tab opens
   document.querySelectorAll('.tabs .tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      if (tab.dataset.tab === 'stats') {
-        setTimeout(() => updateStats(currentPeriod), 50);
-      }
+      if (tab.dataset.tab === 'stats') setTimeout(()=>updateStats(), 50);
     });
   });
 

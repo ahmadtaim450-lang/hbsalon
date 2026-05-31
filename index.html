@@ -553,8 +553,11 @@
     #patientDetailsModal .modal-content {
       width:100% !important; max-width:none !important;
       height:100% !important; max-height:100% !important;
-      margin:0 !important; border:none !important; border-radius:0 !important; box-shadow:none !important;
+      margin:0 !important; padding:0 !important; border:none !important; border-radius:0 !important; box-shadow:none !important;
+      overscroll-behavior: contain;
     }
+    #patientDetailsModal .modal-content > div { overscroll-behavior: contain; }
+    body:has(#patientDetailsModal:not(.hidden)) .bottom-nav { display: none !important; }
     .chart-layout { display:grid; grid-template-columns:1fr; gap:16px; max-width:1400px; margin:0 auto; align-items:start; }
     @media (min-width:900px){
       .chart-layout { grid-template-columns:360px 1fr; }
@@ -5373,6 +5376,17 @@
 
     // طباعة عبر iframe مخفي — لا نوافذ منبثقة ولا تعليق
     function _doPrint(html) {
+      // الموبايل/التابلت: نفتح تبويب طباعة مستقلاً (الـ iframe يطبع صفحة الموقع على الموبايل)
+      var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+        || (window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+      if (isMobile) {
+        var w = window.open('', '_blank');
+        if (!w) { showToast('اسمح بالنوافذ المنبثقة للطباعة', 'error'); return; }
+        var withPrint = html.replace('</body>',
+          '<scr' + 'ipt>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},500);};<\/scr' + 'ipt></body>');
+        w.document.open(); w.document.write(withPrint); w.document.close();
+        return;
+      }
       var old = document.getElementById('_printFrame');
       if (old && old.parentNode) old.parentNode.removeChild(old);
       var f = document.createElement('iframe');

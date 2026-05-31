@@ -438,13 +438,14 @@
       border: none;
       cursor: pointer;
       transition: background 0.15s;
-      color: rgba(255,255,255,0.75);
+      color: #fff;
       font-weight: 600;
       font-size: 0.88rem;
     }
+    .sidebar-item-label { color: #fff !important; }
     .sidebar-item:hover {
       background: rgba(255,255,255,0.12);
-      color: white;
+      color: #fff;
     }
     .sidebar-item.active {
       background: rgba(255,255,255,0.2);
@@ -1194,6 +1195,32 @@
     .patient-action-btn.secondary { background: #64748b !important; color: white !important; }
     .patient-action-btn.danger    { background: var(--red) !important; color: white !important; }
 
+    /* ===== دفتر المرضى: صفوف أفقية (مثل عرض التفاصيل في ويندوز) ===== */
+    .patients-list { display: flex; flex-direction: column; gap: 8px; }
+    .patient-row {
+      direction: ltr;
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 11px 16px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .patient-row:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+    .pr-name { flex: 1 1 auto; min-width: 0; text-align: left; }
+    .pr-name-t { font-size: .95rem; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .pr-phone-sub { font-size: .72rem; font-weight: 400; color: var(--text-muted); margin-top: 2px; font-family: 'DM Mono', monospace; white-space: nowrap; }
+    .pr-visits { flex: 0 0 92px; display: flex; align-items: center; gap: 5px; font-size: .8rem; font-weight: 700; color: var(--primary); justify-content: flex-start; }
+    .pr-actions { flex: 0 0 auto; display: flex; gap: 7px; }
+    .pr-btn { width: 34px; height: 34px; border-radius: 9px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .85rem; transition: opacity .15s, transform .1s; text-decoration: none; }
+    .pr-btn:hover { opacity: .9; } .pr-btn:active { transform: scale(.94); }
+    .pr-btn.primary   { background: var(--primary); color: #fff; }
+    .pr-btn.secondary { background: #64748b; color: #fff; }
+    .pr-btn.whatsapp  { background: #16a34a; color: #fff; }
+    .pr-btn.call      { background: #2563eb; color: #fff; }
+    .pr-btn.danger    { background: var(--red); color: #fff; }
+    @media (max-width: 560px) {
+      .pr-visits { flex-basis: auto; }
+    }
+
     /* ============================================================
        CALENDAR
        ============================================================ */
@@ -1237,6 +1264,19 @@
       color: var(--primary);
       background: var(--primary-light);
     }
+    /* بطاقات إحصائيات اليوم فوق الجدول */
+    .sched-stat { flex:1; min-width:118px; display:flex; align-items:center; gap:8px; background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:6px 10px; }
+    .sched-stat-ic { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.72rem; flex-shrink:0; }
+    .sched-stat-n { font-size:1.05rem; font-weight:800; line-height:1.1; }
+    .sched-stat-l { font-size:.66rem; color:var(--text-muted); font-weight:600; white-space:nowrap; }
+    .sched-stat--total .sched-stat-ic { background:var(--primary-light); color:var(--primary); } .sched-stat--total .sched-stat-n { color:var(--primary); }
+    .sched-stat--rem .sched-stat-ic { background:#eff6ff; color:#2563eb; } .sched-stat--rem .sched-stat-n { color:#2563eb; }
+    .sched-stat--vis .sched-stat-ic { background:#dcfce7; color:#16a34a; } .sched-stat--vis .sched-stat-n { color:#16a34a; }
+    .sched-stat--abs .sched-stat-ic { background:#fee2e2; color:#dc2626; } .sched-stat--abs .sched-stat-n { color:#dc2626; }
+    /* الوضع الليلي: خلفيات داكنة وألوان أوضح */
+    body.theme-dark .sched-stat--rem .sched-stat-ic { background:#13243d; color:#60a5fa; } body.theme-dark .sched-stat--rem .sched-stat-n { color:#60a5fa; }
+    body.theme-dark .sched-stat--vis .sched-stat-ic { background:#0e2e1c; color:#4ade80; } body.theme-dark .sched-stat--vis .sched-stat-n { color:#4ade80; }
+    body.theme-dark .sched-stat--abs .sched-stat-ic { background:#3a1c1c; color:#f87171; } body.theme-dark .sched-stat--abs .sched-stat-n { color:#f87171; }
     .compact-calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -2281,10 +2321,36 @@
         <div id="loginError" style="display:none;background:#fee2e2;border-radius:10px;padding:10px;font-size:.8rem;color:#dc2626;margin-bottom:12px;text-align:center;"></div>
         <button onclick="doLocalLogin()" id="loginBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:14px;font-family:inherit;font-size:.95rem;font-weight:800;cursor:pointer;">تسجيل الدخول</button>
       </div>
+      <div id="loginVerifying" style="display:none;text-align:center;padding:18px 0;">
+        <div class="login-spinner"></div>
+        <div style="font-size:.95rem;font-weight:800;color:#0d9488;margin-top:18px;">جارٍ التحقق من البيانات...</div>
+        <div style="font-size:.78rem;font-weight:600;color:#5f9ea0;margin-top:6px;">يرجى الانتظار قليلاً</div>
+      </div>
     </div>
   </div>
-  <style>@keyframes loginCardIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}</style>
+  <style>@keyframes loginCardIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  .login-spinner{width:46px;height:46px;border-radius:50%;border:4px solid #cdeeea;border-top-color:#0d9488;margin:0 auto;animation:loginSpin .8s linear infinite;}
+  @keyframes loginSpin{to{transform:rotate(360deg)}}</style>
   <script>
+    // ── شاشة "جارٍ التحقق" تمنع ظهور أي واجهة قبل اكتمال التحقق ──
+    var _verifyFallbackTimer = null;
+    function showVerifying() {
+      var f = document.getElementById('loginForm'); if (f) f.style.display = 'none';
+      var v = document.getElementById('loginVerifying'); if (v) v.style.display = 'block';
+      var ov = document.getElementById('loginOverlay'); if (ov) { ov.style.display = 'flex'; ov.style.opacity = '1'; }
+      clearTimeout(_verifyFallbackTimer);
+      _verifyFallbackTimer = setTimeout(function(){ showLoginForm(); }, 8000);
+    }
+    function showLoginForm(msg) {
+      clearTimeout(_verifyFallbackTimer);
+      var v = document.getElementById('loginVerifying'); if (v) v.style.display = 'none';
+      var f = document.getElementById('loginForm'); if (f) f.style.display = 'block';
+      var ov = document.getElementById('loginOverlay'); if (ov) { ov.style.display = 'flex'; ov.style.opacity = '1'; }
+      if (msg) { var e = document.getElementById('loginError'); if (e) { e.style.display = 'block'; e.textContent = msg; } }
+    }
+    // ابدأ بحالة التحقق فوراً حتى لا تظهر أي واجهة (تطبيق أو نموذج) قبل التأكد
+    showVerifying();
+
     // ── تسجيل الدخول عبر Firebase Auth + التحقق من الدور ──
     function doLocalLogin() {
       var email = document.getElementById('loginUser').value.trim();
@@ -2299,6 +2365,7 @@
       }
       err.style.display = 'none';
       btn.disabled = true; btn.textContent = 'جارٍ التحقق...';
+      showVerifying();
 
       function tryLogin() {
         window._fb.signIn(email, pass)
@@ -2308,17 +2375,16 @@
               if (role !== 'nurse') {
                 return window._fb.signOut().then(function() {
                   btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-                  err.style.display = 'block';
-                  err.textContent = 'هذا الحساب غير مصرح له بالدخول هنا';
+                  showLoginForm('هذا الحساب غير مصرح له بالدخول هنا');
                 });
               }
               btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+              // النجاح: onAuth سيكشف اللوحة بعد تأكيد الدور
             });
           })
           .catch(function(e) {
             btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-            err.style.display = 'block';
-            err.textContent = 'بيانات الدخول غير صحيحة';
+            showLoginForm('بيانات الدخول غير صحيحة');
             console.error('[Login]', e.code, e.message);
           });
       }
@@ -2334,33 +2400,40 @@
     function initAuthWatch() {
       var ov = document.getElementById('loginOverlay');
 
-      window._fb.onAuth(function(user) {
-        if (user) {
-          // Firebase يؤكد الجلسة — افتح اللوحة
-          ov.style.transition = 'opacity .3s';
-          ov.style.opacity = '0';
-          setTimeout(function(){ ov.style.display = 'none'; }, 300);
+      function revealApp() {
+        clearTimeout(_verifyFallbackTimer);
+        ov.style.transition = 'opacity .3s';
+        ov.style.opacity = '0';
+        setTimeout(function(){ ov.style.display = 'none'; }, 300);
+      }
 
-          // تحقق من الدور مرة واحدة فقط
-          if (!_dataLoaded) {
-            window._fb.getDoc('users', user.uid).then(function(snap) {
-              var role = snap.exists() ? snap.data().role : null;
-              if (role !== 'nurse') {
-                window._fb.signOut();
-                ov.style.display = 'flex'; ov.style.opacity = '1';
-                var errEl = document.getElementById('loginError');
-                if (errEl) { errEl.style.display='block'; errEl.textContent='هذا الحساب غير مصرح له بالدخول هنا'; }
-                return;
-              }
-              _dataLoaded = true;
-              if (typeof initializeData === 'function') initializeData();
-            }).catch(function(e) { console.error('[Auth]', e); });
-          }
-        } else {
-          // Firebase يؤكد عدم وجود جلسة — أظهر شاشة الدخول
+      window._fb.onAuth(function(user) {
+        if (!user) {
+          // لا توجد جلسة — أظهر نموذج الدخول
           _dataLoaded = false;
-          ov.style.display = 'flex'; ov.style.opacity = '1';
+          showLoginForm();
+          return;
         }
+        // جلسة موجودة — تبقى شاشة "جارٍ التحقق" حتى نتأكد أن الدور = ممرضة
+        showVerifying();
+        if (_dataLoaded) { revealApp(); return; }
+        window._fb.getDoc('users', user.uid).then(function(snap) {
+          var role = snap.exists() ? snap.data().role : null;
+          if (role !== 'nurse') {
+            // حساب غير مصرّح — سجّل الخروج وأظهر النموذج دون كشف اللوحة
+            return window._fb.signOut().then(function() {
+              _dataLoaded = false;
+              showLoginForm('هذا الحساب غير مصرح له بالدخول هنا');
+            });
+          }
+          // ممرضة مؤكَّدة — الآن فقط افتح اللوحة وحمّل البيانات
+          _dataLoaded = true;
+          revealApp();
+          if (typeof initializeData === 'function') initializeData();
+        }).catch(function(e) {
+          console.error('[Auth]', e);
+          showLoginForm('تعذّر التحقق من الصلاحية، حاول مجدداً');
+        });
       });
     }
     if (window._fbReady) initAuthWatch();
@@ -2654,7 +2727,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4" id="patientsGrid"></div>
+          <div class="patients-list" id="patientsGrid"></div>
         </div>
       </section>
 
@@ -2789,6 +2862,8 @@
                 </div>
                 <div id="schedSearchResults" style="display:flex; flex-direction:column; gap:6px; margin-top:10px; max-height:42vh; overflow-y:auto;"></div>
               </div>
+              <!-- شريط إحصائيات اليوم (مصغّر فوق الجدول) -->
+              <div id="schedStatsBar" style="display:flex; flex-wrap:wrap; gap:8px; padding:9px 14px; border-bottom:1.5px solid var(--border); background:var(--bg);"></div>
               <!-- Grid -->
               <div id="scheduleGrid" style="overflow:auto; max-height:72vh;"></div>
             </div>
@@ -4695,6 +4770,15 @@
     window.toggleSidebarCollapse = function() {
       const collapsed = document.body.classList.toggle('sidebar-collapsed');
       try { localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'); } catch (e) {}
+      // عند فتح الناف بار: أخرج الجدول من ملء الشاشة لتفادي التداخل
+      if (!collapsed) {
+        const sec = document.getElementById('calendarSection');
+        if (sec && sec.classList.contains('is-fullscreen')) {
+          sec.classList.remove('is-fullscreen');
+          const fb = document.getElementById('schedFullBtn');
+          if (fb) { fb.innerHTML = '<i class="fas fa-expand"></i>'; fb.title = 'ملء الشاشة'; fb.style.background = ''; }
+        }
+      }
       // إعادة رسم الجدول بعد انتهاء حركة العرض ليُعاد توزيع الأعمدة
       setTimeout(function() { if (typeof renderScheduleGrid === 'function') renderScheduleGrid(); }, 380);
     };
@@ -5215,19 +5299,23 @@
         patients = patients.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.phone||'').includes(q));
       }
       if (!patients.length) {
-        grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:32px;color:var(--text-muted);"><i class="fas fa-user-slash" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>لا يوجد مرضى</div>';
+        grid.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="fas fa-user-slash" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>لا يوجد مرضى</div>';
         return;
       }
       grid.innerHTML = patients.map(p=>{
         const phone = normalizePhone(p.phone);
-        return `<div class="patient-card">
-          <div class="patient-name">${escapeHtml(p.name)}</div>
-          <div class="patient-phone"><i class="fas fa-phone"></i>${escapeHtml(p.phone)}</div>
-          <div style="font-size:.75rem; color:var(--primary); margin-top:4px; font-weight:600;">${p.totalVisits||0} زيارة</div>
-          <div class="patient-actions">
-            <button class="patient-action-btn primary" onclick="openAddVisitModal('${p.id}','${escapeHtml(p.name)}','${escapeHtml(p.phone)}','${p.birthDate||''}','${escapeHtml(p.address||'')}')"><i class="fas fa-plus"></i> زيارة</button>
-            <button class="patient-action-btn secondary" onclick="openPatientDetailsModal('${p.id}')"><i class="fas fa-eye"></i> تفاصيل</button>
-            <button class="patient-action-btn danger" onclick="deletePatient('${p.id}')"><i class="fas fa-trash-alt"></i></button>
+        return `<div class="patient-row" title="كليك يمين: فتح إضبارة المريض" oncontextmenu="event.preventDefault();openPatientDetailsModal('${p.id}');return false;">
+          <div class="pr-name">
+            <div class="pr-name-t">${escapeHtml(p.name)}</div>
+            <div class="pr-phone-sub" dir="ltr">${escapeHtml(p.phone||'')}</div>
+          </div>
+          <div class="pr-visits"><i class="fas fa-calendar-check" style="font-size:.72rem;"></i> ${p.totalVisits||0} زيارة</div>
+          <div class="pr-actions">
+            <button class="pr-btn primary"   title="إضافة زيارة" onclick="openAddVisitModal('${p.id}','${escapeHtml(p.name)}','${escapeHtml(p.phone)}','${p.birthDate||''}','${escapeHtml(p.address||'')}')"><i class="fas fa-plus"></i></button>
+            <button class="pr-btn secondary" title="تفاصيل" onclick="openPatientDetailsModal('${p.id}')"><i class="fas fa-eye"></i></button>
+            <a class="pr-btn whatsapp" href="https://wa.me/${phone}" target="_blank" title="واتساب"><i class="fab fa-whatsapp"></i></a>
+            <a class="pr-btn call" href="tel:${phone}" title="اتصال"><i class="fas fa-phone"></i></a>
+            <button class="pr-btn danger"    title="حذف" onclick="deletePatient('${p.id}')"><i class="fas fa-trash-alt"></i></button>
           </div>
         </div>`;
       }).join('');
@@ -5799,7 +5887,29 @@
       else { openVisitManagement(r); }
     };
 
+    function renderSchedStats() {
+      const bar = document.getElementById('schedStatsBar'); if (!bar) return;
+      const recs   = (allRecords || []).filter(r => r.Date === todayStr);
+      const active = recs.filter(r => ['Accepted','Visited','NoShow'].includes(r.Status));
+      const total    = active.length;
+      const visited  = recs.filter(r => r.Status === 'Visited').length;
+      const absent   = recs.filter(r => r.Status === 'NoShow').length;
+      const remaining = active.filter(r => r.Status === 'Accepted').length;
+      function chip(cls, label, val, icon) {
+        return '<div class="sched-stat ' + cls + '">'
+          + '<span class="sched-stat-ic"><i class="' + icon + '"></i></span>'
+          + '<div style="min-width:0;"><div class="sched-stat-n">' + val + '</div>'
+          + '<div class="sched-stat-l">' + label + '</div></div></div>';
+      }
+      bar.innerHTML =
+          chip('sched-stat--total', 'مواعيد اليوم', total, 'fas fa-calendar-check')
+        + chip('sched-stat--rem', 'متبقية', remaining, 'fas fa-clock')
+        + chip('sched-stat--vis', 'زاروا اليوم', visited, 'fas fa-user-check')
+        + chip('sched-stat--abs', 'لم يحضروا', absent, 'fas fa-user-xmark');
+    }
+
     function renderScheduleGrid() {
+      renderSchedStats();
       const host = document.getElementById('scheduleGrid'); if (!host) return;
       // أيام العرض
       let days = [];
@@ -5838,12 +5948,13 @@
       });
       head += '</div>';
 
-      // ===== Body ===== (هامش علوي/سفلي ليظهر أول وآخر تسمية ساعة كاملةً)
-      let body = '<div style="display:grid;grid-template-columns:' + colsTemplate + ';padding:11px 0;">';
+      // ===== Body ===== (بلا هامش علوي/سفلي ليلتصق الجدول بالحواف؛ أول/آخر تسمية مثبّتة لئلا تُقصّ)
+      let body = '<div style="display:grid;grid-template-columns:' + colsTemplate + ';">';
       // عمود الساعات (يميناً)
       let gutter = '<div style="position:relative;height:' + bodyH + 'px;">';
       for (let h = SCHED_START_HOUR; h <= SCHED_END_HOUR; h++) {
-        gutter += '<div class="sched-gutter-lbl" style="top:' + ((h - SCHED_START_HOUR) * SCHED_HOUR_PX) + 'px;">' + fmtSchedHour(h) + '</div>';
+        const _ty = (h === SCHED_START_HOUR) ? 'translateY(0)' : (h === SCHED_END_HOUR ? 'translateY(-100%)' : '');
+        gutter += '<div class="sched-gutter-lbl" style="top:' + ((h - SCHED_START_HOUR) * SCHED_HOUR_PX) + 'px;' + (_ty ? 'transform:' + _ty + ';' : '') + '">' + fmtSchedHour(h) + '</div>';
       }
       gutter += '</div>';
       body += gutter;
@@ -5904,11 +6015,14 @@
         + '<button class="m-btn-ok" onclick="event.stopPropagation();confirmAttendById(\'' + r.id + '\')"><i class="fas fa-check"></i> تأكيد الحضور</button>'
         + '<button class="m-btn-cancel" onclick="event.stopPropagation();cancelAppointment(\'' + r.id + '\')"><i class="fas fa-times"></i> إلغاء</button>'
         + '</div>';
+      const t = slotLabelOf(r);
       return '<div class="m-appt" style="border-right-color:' + c.bd + ';" onclick="openModalById(\'' + r.id + '\')">'
+        + '<div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">'
+        + '<div style="display:flex;align-items:center;gap:3px;background:var(--primary-light);color:var(--primary);border-radius:8px;padding:5px 9px;font-family:\'DM Mono\',monospace;font-weight:800;font-size:.78rem;flex-shrink:0;white-space:nowrap;"><i class="far fa-clock" style="font-size:.62rem;"></i> ' + t + '</div>'
         + '<div style="min-width:0;">'
         + '<p class="m-appt-name">' + escapeHtml(r.PatientName || '') + '</p>'
-        + '<p class="m-appt-date">' + formatDateAr(r.Date) + ' · ' + slotLabelOf(r) + '</p>'
-        + '</div>' + right + '</div>';
+        + '<p class="m-appt-date">' + (r.VisitType ? escapeHtml(r.VisitType) : formatDateAr(r.Date)) + '</p>'
+        + '</div></div>' + right + '</div>';
     }
     function renderMobileDayAgenda(dateStr) {
       const box = document.getElementById('mobileDayAgenda'); if (!box) return;
@@ -5929,13 +6043,8 @@
         box.innerHTML = '<div style="text-align:center;padding:28px 10px;color:var(--text-muted);font-size:.85rem;"><i class="far fa-calendar-check" style="font-size:1.8rem;display:block;margin-bottom:10px;opacity:.4;"></i>لا مواعيد في هذا اليوم</div>';
         return;
       }
-      const groups = {};
-      recs.forEach(function(r){ const t = slotTimeOf(r); (groups[t] = groups[t] || []).push(r); });
-      const times = Object.keys(groups).sort(function(a,b){ return slotMinutes(a) - slotMinutes(b); });
-      box.innerHTML = times.map(function(t){
-        return '<div><div class="m-slot-head"><i class="far fa-clock"></i> ' + t + '</div>'
-          + '<div style="display:flex;flex-direction:column;gap:8px;">' + groups[t].map(mobileApptCard).join('') + '</div></div>';
-      }).join('');
+      // قائمة مسطّحة مرتّبة من الأبكر للمتأخّر — الوقت داخل كل كرت
+      box.innerHTML = recs.map(mobileApptCard).join('');
     }
 
     // ===== تذكير مواعيد اليوم =====
@@ -7403,7 +7512,7 @@
   <!-- Footer -->
   <footer style="text-align:center; padding:18px 20px; margin-top:8px; border-top:1px solid var(--border); background:var(--surface);">
     <div style="font-size:.72rem; color:var(--text-muted); font-weight:500; line-height:1.8;">
-      <span style="font-weight:800; color:var(--primary); letter-spacing:.5px;">nawwacode</span>
+      <span style="font-weight:800; color:var(--primary); letter-spacing:.5px;">nawwacodes</span>
       <span style="margin:0 6px; opacity:.4;">·</span>
       جميع الحقوق محفوظة © 2026
     </div>
@@ -7442,11 +7551,9 @@
       if (typeof _unsubClosed      === 'function') _unsubClosed();
       if (typeof _unsubNurseAlerts === 'function') _unsubNurseAlerts();
       window._fb.signOut().then(function() {
-        var ov = document.getElementById('loginOverlay');
-        ov.style.display = 'flex'; ov.style.opacity = '0';
-        setTimeout(function(){ ov.style.opacity = '1'; ov.style.transition = 'opacity .3s'; }, 50);
         var lu = document.getElementById('loginUser'); if(lu) lu.value = '';
         var lp = document.getElementById('loginPassword'); if(lp) lp.value = '';
+        showLoginForm();
       });
     });
   };

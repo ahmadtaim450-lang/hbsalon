@@ -3307,7 +3307,7 @@
 
       <!-- Footer -->
       <div style="padding:16px 20px; border-top:1.5px solid var(--border); display:flex; gap:10px;">
-        <button id="deleteAppointmentModalBtn" onclick="deleteAppointmentFromModal()" class="btn-danger hidden" style="flex:1; padding:12px; font-size:.9rem;">إلغاء الموعد</button>
+        <button id="deleteAppointmentModalBtn" onclick="deleteApptWithNotify()" class="btn-danger" style="flex:1; padding:12px; font-size:.9rem;"><i class="fas fa-trash-alt" style="margin-left:6px;"></i> حذف الموعد</button>
         <a id="appDetailsWhatsappBtn" href="#" target="_blank" style="flex:1; padding:12px; font-size:.9rem; background:#25D366; color:white; border:none; border-radius:var(--radius-sm); font-weight:700; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px; text-decoration:none;"><i class="fab fa-whatsapp" style="font-size:1.1rem;"></i> واتساب</a>
         <button onclick="closeAppointmentDetailsModal()" class="btn-primary" style="flex:1; padding:12px; font-size:.9rem;justify-content:center;text-align:center;">حسناً</button>
       </div>
@@ -6521,7 +6521,8 @@
       _editApptId = id;
       var _ep = document.getElementById('apptEditPanel'); if (_ep) _ep.style.display = 'none';
       const deleteBtn=document.getElementById('deleteAppointmentModalBtn');
-      r.Status==='Accepted' ? deleteBtn.classList.remove('hidden') : deleteBtn.classList.add('hidden');
+      // يظهر زر الحذف لكل المواعيد عدا الملغاة/المرفوضة
+      (['Cancelled','Rejected'].includes(r.Status)) ? deleteBtn.classList.add('hidden') : deleteBtn.classList.remove('hidden');
       document.getElementById('appointmentDetailsModal').classList.remove('hidden');
     };
     window.closeAppointmentDetailsModal = function() { document.getElementById('appointmentDetailsModal').classList.add('hidden'); };
@@ -6587,6 +6588,22 @@
     });
     window.deleteAppointmentFromModal = function() {
       if(deleteAppointmentId) { document.getElementById('appointmentDetailsModal').classList.add('hidden'); confirmDelete(deleteAppointmentId); }
+    };
+
+    // حذف الموعد مع إشعار إلغاء عبر واتساب (وخيار SMS احتياطي) — يعمل على الموبايل/التابلت/اللابتوب
+    window.deleteApptWithNotify = function() {
+      var id = deleteAppointmentId; if (!id) return;
+      var r = (allRecords || []).find(function(x){ return x.id === id; });
+      appConfirm('حذف هذا الموعد وإرسال إشعار إلغاء للمريض؟', 'حذف الموعد').then(function(ok){
+        if (!ok) return;
+        // إشعار الإلغاء: واتساب أولاً ثم خيار SMS إن لم تصل الرسالة
+        if (r && r.Phone) sendWhatsAppCancellation(r.Phone, r.PatientName || '', r.Date);
+        // حذف الموعد فعلياً
+        if (typeof deleteAppointment === 'function') deleteAppointment(id);
+        document.getElementById('appointmentDetailsModal').classList.add('hidden');
+        deleteAppointmentId = null;
+        showToast('تم حذف الموعد', 'success');
+      });
     };
 
     // ================== Manual Form ==================
